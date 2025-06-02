@@ -1,0 +1,189 @@
+/* ===============================
+   📁 static/css/index.css
+   index.html 전용 스타일 (모바일 대응 포함)
+================================ */
+
+/* 메인 콘텐츠 컨테이너 (중앙 정렬, 최대 너비 제한) */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+/* 로고 + 텍스트 나란히 배치 */
+.logo-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* 로고 이미지 크기 제한 */
+.logo-img {
+  display: block;
+  height: auto;
+  width: auto;
+  max-height: 70px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* 로고 텍스트 스타일 */
+.logo-text {
+  font-size: 2rem;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* 안내 문구 */
+.description {
+  font-size: 1rem;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+/* 검색창 컨테이너 */
+.search-box {
+  display: flex;
+  max-width: 600px;
+  width: 100%;
+  background: #ffffff;
+  border: 2px solid var(--main-color);
+  border-radius: 999px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+  margin-top: 24px;
+  transition: box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* 검색창 포커스 시 그림자 강조 */
+.search-box:focus-within {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+/* 검색 입력창 */
+.search-box input {
+  flex: 1 1 auto;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 8px;
+  background: transparent;
+  color: #000;
+  min-width: 0;
+}
+
+/* 검색 버튼 */
+.search-box button {
+  background: var(--main-color);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.search-box button:hover {
+  background: var(--hover-color);
+}
+
+/* 예시 질문 섹션 */
+.examples {
+  max-width: 640px;
+  margin-top: 24px;
+  padding: 0 16px;
+}
+
+/* 예시 질문 타이틀 */
+.examples-title {
+  font-weight: 600;
+  color: var(--main-color);
+  margin-bottom: 8px;
+}
+
+/* 예시 버튼 리스트 */
+.example-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 예시 질문 버튼 */
+.example-list button {
+  background-color: #f3e8ff;
+  border: 1px solid #d8b4fe;
+  color: #000000;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.example-list button:hover {
+  background-color: #ede9fe;
+  transform: translateY(-1px);
+}
+
+/* ===============================
+   📱 반응형: 모바일 최적화
+================================ */
+@media (max-width: 768px) {
+  .container {
+    padding: 24px 12px;
+  }
+
+  .logo-img {
+    max-height: 60px;
+    max-width: 80px;
+  }
+
+  .logo-text {
+    font-size: 1.4rem;
+  }
+
+  .logo-title {
+    gap: 8px;
+  }
+
+  .description {
+    font-size: 0.95rem;
+    text-align: center;
+  }
+
+  .search-box {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .search-box input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .search-box button {
+    flex-shrink: 0;
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+  }
+
+  .examples {
+    padding: 0;
+  }
+
+  .example-list button {
+    font-size: 1rem;
+  }
+}

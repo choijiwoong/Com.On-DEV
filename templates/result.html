@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Com.On - 추천 보고서</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/result.css') }}">
+  <script src="{{ url_for('static', filename='js/result.js') }}"></script>
+</head>
+
+<body>
+  <div class="navbar">
+    <a href="/" class="navbar-logo">
+      <img
+        src="https://velog.velcdn.com/images/gogogi313/post/de631a3a-9004-4965-815c-24525d5cdac0/image.png"
+        alt="팀 로고"
+        class="logo-img"
+      />
+    </a>
+    <span class="navbar-title">맞춤형 추천 보고서</span>
+  </div>
+
+  <p id="queryText">사용자의 조건을 불러오는 중...</p>
+  <p id="queryExplanation"></p>
+  <div id="product-container"></div>
+</body>
+</html>

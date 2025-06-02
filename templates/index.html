@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Com.On - 검색</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="logo-title">
+	  <a href="/">
+        <img
+          src="https://velog.velcdn.com/images/gogogi313/post/5a189f79-fe7c-4dad-ae81-e822707deaf5/image.png"
+          alt="팀 로고1"
+          class="logo-img"
+        />
+	  </a>
+      <h1 class="logo-text">Com.On ✨</h1>
+    </div>
+	
+
+    <p class="description">
+      당신의 조건에 딱 맞는 제품을 대화로 검색해보세요
+    </p>
+
+    <form class="search-box" onsubmit="goToResult(); return false;">
+      <input
+        type="text"
+        id="userQuery"
+        placeholder="검색어를 입력하세요..."
+      />
+      <button type="submit">검색</button>
+    </form>
+
+    <div class="examples">
+      <p class="examples-title">💬 예시로 이런 질문은 어때요?</p>
+      <div class="example-list" id="example-list"></div>
+    </div>
+  </div>
+
+  <footer style="margin-top: 60px; padding: 20px 0; text-align: center; font-size: 0.9rem; color: #888;">
+    ⓒ 최지웅 | 2025 가천대학교 창업대학 코코네스쿨 팀 GRIT
+  </footer>
+
+  <!-- Google Tag Manager (noscript) -->
+  <noscript>
+    <iframe
+      src="https://www.googletagmanager.com/ns.html?id=GTM-MZHQSKG5"
+      height="0"
+      width="0"
+      style="display:none;visibility:hidden"
+    ></iframe>
+  </noscript>
+</body>
+</html>

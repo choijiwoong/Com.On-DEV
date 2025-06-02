@@ -1,0 +1,51 @@
+/* ===============================
+   📁 static/css/style.css
+   공통 스타일 (폰트, 색상, 레이아웃 등)
+================================ */
+
+/* 테마 컬러 변수 정의 */
+:root {
+  --main-color: #f35a4a;
+  --hover-color: #e14b3d;
+  --light-bg: #fff0eb;
+}
+
+/* 전체 뷰포트 가로 스크롤 방지 */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* 기본 바디 폰트 및 색상 설정 */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #ffffff;
+  color: #000000;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* 기본 제목 스타일 */
+h1 {
+  color: #000000;
+  font-size: 2rem;
+  margin-bottom: 24px;
+}
+
+/* 버튼 공통 스타일 */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 반응형: 모바일 화면용 타이포 및 여백 조정 */
+@media (max-width: 768px) {
+  body {
+    padding: 20px 12px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+}

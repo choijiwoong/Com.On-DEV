@@ -17,7 +17,7 @@ const query = params.get("query");
 async function getValidImageURLs(query, max = 5) {
   const validImages = [];
   try {
-    const res = await fetch("https://n8n.1000.school/webhook/2b344ea5-44e3-4496-b8a3-86c0d8df901e", {
+    const res = await fetch("https://n8n.1000.school/webhook/naver-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query })
@@ -53,7 +53,7 @@ const fetchFallbackFromN8N = async (questionText) => {
   container.innerHTML = `<p class="loading-animated">🌀 맞춤형 추천을 불러오는 중</p>`;
   startFancyLoading();
   try {
-    const response = await fetch('https://n8n.1000.school/webhook/e167ca4a-ea51-4f12-85d1-c31acd94f3c0', {
+    const response = await fetch('https://n8n.1000.school/webhook/c932befe-195e-46b0-8502-39c9b1c69cc2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: questionText || "기본 추천 리스트 보여줘" })
@@ -112,7 +112,7 @@ function renderStars(score) {
   return starsHTML;
 }
 
-function trackProductClick(productName, productLink) {
+function trackProductClick(productName, productLink, query) {
     fetch('/log/click', {
       method: 'POST',
       headers: {
@@ -121,6 +121,7 @@ function trackProductClick(productName, productLink) {
       body: JSON.stringify({
         product_name: productName,
         product_link: productLink,
+        product_query: query,
         timestamp: new Date().toISOString()
       })
     }).catch(err => console.error('❌ 로그 전송 실패:', err));
@@ -173,18 +174,10 @@ document.addEventListener("click", (e) => {
 
   const productName = btn.getAttribute("data-product");
   const productLink = btn.getAttribute("data-link");
+  const queryFromAttr = btn.getAttribute("data-query") || query; // fallback
 
-  fetch("/log/click", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      product_name: productName,
-      product_link: productLink,
-      timestamp: new Date().toISOString()
-    })
-  });
+  trackProductClick(productName, productLink, queryFromAttr);
 });
-
 
 document.addEventListener("click", (e) => {
   if (!e.target.classList.contains("slider-btn")) return;
@@ -238,12 +231,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (!data.products || data.products.length === 0) {
         await fetchFallbackFromN8N(query);
+        insertFeedbackSection();
         return;
       }
       
       await new Promise(r => setTimeout(r, Math.random() * 2000 + 3000)); // 3~5초 대기
       container.innerHTML = ""; // 로딩 화면 제거
-      insertFooter();
       
       explanationBox.innerText = data.explanation || "";
       data.products.forEach(p => {
@@ -254,7 +247,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       queryBox.innerText = "추천 상품을 불러오는 데 문제가 발생했어요.";
       await fetchFallbackFromN8N(query);
     }
-
+    insertFeedbackSection();
+    insertFooter();
   } else {
     queryBox.innerText = "💬 조건을 인식하지 못했어요. 기본 추천 리스트를 보여드릴게요.";
     await fetchFallbackFromN8N("기본 추천 리스트 보여줘");
@@ -303,3 +297,31 @@ function startFancyLoading() {
 
   return () => clearInterval(interval);
 }
+
+function insertFeedbackSection() {
+  const section = document.createElement("div");
+  section.style.marginTop = "40px";
+  section.style.padding = "20px";
+  section.style.textAlign = "center";
+  section.style.fontSize = "0.95rem";
+  section.style.color = "#555";
+
+  section.innerHTML = `
+    <p>📬 서비스에 대한 피드백이 있으신가요?<br>
+    아래 오픈채팅방을 통해 언제든지 의견을 나눠주세요!</p>
+    
+    <a href="https://open.kakao.com/o/glqkU8zh" target="_blank" style="display:inline-block; margin: 10px; font-weight: bold; color: #0068ff; text-decoration: none;">
+      👉 오픈채팅방 바로가기
+    </a>
+    
+    <div style="margin-top: 15px;">
+      <img src="https://velog.velcdn.com/images/gogogi313/post/35554d94-8b43-444a-8dc9-f31d5a168065/image.png" 
+           alt="오픈채팅방 QR코드" 
+           style="width: 130px; height: 130px; border: 1px solid #eee; border-radius: 8px;">
+      <p style="margin-top: 8px; font-size: 0.85rem; color: #999;">QR로도 참여하실 수 있어요</p>
+    </div>
+  `;
+
+  document.body.appendChild(section);
+}
+

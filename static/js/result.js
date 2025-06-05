@@ -1,3 +1,15 @@
+// Google Tag Manager 삽입
+(function (w, d, s, l, i) {
+  w[l] = w[l] || [];
+  w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  var f = d.getElementsByTagName(s)[0],
+    j = d.createElement(s),
+    dl = l != 'dataLayer' ? '&l=' + l : '';
+  j.async = true;
+  j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+  f.parentNode.insertBefore(j, f);
+})(window, document, 'script', 'dataLayer', 'GTM-MZHQSKG5');
+
 // URL 파라미터에서 'query' 값을 추출
 const params = new URLSearchParams(window.location.search);
 const query = params.get("query");
@@ -50,7 +62,7 @@ const fetchFallbackFromN8N = async (questionText) => {
     if (!response.ok) throw new Error("네트워크 오류 발생");
 
     const html = await response.text();
-    container.innerHTML = `<p id="queryExplanation"> (안내 메시지: 현재 구현 중인 기능입니다. 간단한 포맷을 참고해주시고 피드백해주시면 감사드리겠습니다.)</p>` + html;
+    container.innerHTML = `<p id="queryExplanation"></p>` + html;
 
     // 썸네일 이미지 자동 교체
     const products = container.querySelectorAll(".product");
@@ -100,6 +112,19 @@ function renderStars(score) {
   return starsHTML;
 }
 
+function trackProductClick(productName, productLink) {
+    fetch('/log/click', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        product_name: productName,
+        product_link: productLink,
+        timestamp: new Date().toISOString()
+      })
+    }).catch(err => console.error('❌ 로그 전송 실패:', err));
+  }
 
 // 추천 상품 HTML 블록을 문자열로 생성
 const renderProduct = (p) => {
@@ -129,10 +154,37 @@ const renderProduct = (p) => {
         </div>
       </div>
       <p class="highlight">${p.highlight}</p>
-      <a class="buy-button" href="${p.link}" target="_blank">🔗 상세페이지에서 자세히 보기</a>
+	<a class="buy-button"
+	   href="${p.link}"
+	   target="_blank"
+	   data-product="${p.name}"
+	   data-link="${p.link}">
+	   🔗 상세페이지에서 자세히 보기
+	</a>
+
     </div>
   `;
 };
+
+// JS 하단에 클릭 이벤트 위임 추가
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".buy-button");
+  if (!btn) return;
+
+  const productName = btn.getAttribute("data-product");
+  const productLink = btn.getAttribute("data-link");
+
+  fetch("/log/click", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      product_name: productName,
+      product_link: productLink,
+      timestamp: new Date().toISOString()
+    })
+  });
+});
+
 
 document.addEventListener("click", (e) => {
   if (!e.target.classList.contains("slider-btn")) return;
@@ -150,6 +202,23 @@ document.addEventListener("click", (e) => {
   slides[nextIndex].classList.add("active");
 });
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function insertFooter() {
+  const footer = document.createElement("footer");
+  footer.style.marginTop = "60px";
+  footer.style.padding = "20px 0";
+  footer.style.textAlign = "center";
+  footer.style.fontSize = "0.9rem";
+  footer.style.color = "#888";
+  footer.innerText = '"위 결과는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."';
+
+  document.body.appendChild(footer);
+}
+
+
 // 페이지 로딩 시, query값에 따라 API 요청 및 HTML 렌더링
 document.addEventListener("DOMContentLoaded", async () => {
   const queryBox = document.getElementById("queryText");
@@ -160,16 +229,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     queryBox.innerText = `💬 “${query}” 조건에 맞는 추천 리스트입니다.`;
 
     try {
+      startFancyLoading(); // 로딩 시작
+    
       const res = await fetch(`/api/products?query=${encodeURIComponent(query)}`);
       const data = await res.json();
 
-      explanationBox.innerText = data.explanation || "";
+      
 
       if (!data.products || data.products.length === 0) {
         await fetchFallbackFromN8N(query);
         return;
       }
-
+      
+      await new Promise(r => setTimeout(r, Math.random() * 2000 + 3000)); // 3~5초 대기
+      container.innerHTML = ""; // 로딩 화면 제거
+      insertFooter();
+      
+      explanationBox.innerText = data.explanation || "";
       data.products.forEach(p => {
         container.insertAdjacentHTML("beforeend", renderProduct(p));
       });
@@ -209,14 +285,17 @@ function startFancyLoading() {
   const countSpan = document.getElementById("doc-count");
   const docText = document.querySelector(".doc-count");
 
+  // 80 ~ 120 사이의 랜덤 목표값 설정
+  const targetCount = Math.floor(Math.random() * 41) + 80;
+
   const interval = setInterval(() => {
     const increment = Math.floor(Math.random() * 4) + 2;
     count += increment;
 
-    if (count >= 92) {
+    if (count >= targetCount) {
       clearInterval(interval);
-      countSpan.textContent = "약 92";
-      docText.innerHTML = `📄 약 92개의 문서를 탐색했습니다.<br>잠시만 기다려주세요...`;
+      countSpan.textContent = `약 ${targetCount}`;
+      docText.innerHTML = `📄 약 ${targetCount}개의 문서를 탐색했습니다.<br>잠시만 기다려주세요...`;
     } else {
       countSpan.textContent = count;
     }

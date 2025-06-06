@@ -22,9 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const btn = document.createElement("button");
         btn.textContent = q.text;
         btn.id = q.id;
-        btn.onclick = () => {
-          document.getElementById("userQuery").value = q.text;
-        };
+        btn.onclick = () => fillExample(btn);
         list.appendChild(btn);
       });
     })
@@ -43,7 +41,27 @@ function goToResult() {
   }
 }
 
-// 예시 버튼 클릭 시 입력창에 텍스트 채워넣기
 function fillExample(el) {
-  document.getElementById("userQuery").value = el.textContent;
+  const input = document.getElementById("userQuery");
+  const text = el.textContent.trim();
+  input.value = ""; // 기존 입력 초기화
+
+  let index = 0;
+  const typingSpeed = 30; // 밀리초 단위 속도 (원하는 속도로 조절)
+
+  // 타이핑 효과 구현
+  const typingInterval = setInterval(() => {
+    if (index < text.length) {
+      input.value += text.charAt(index);
+      index++;
+    } else {
+      clearInterval(typingInterval);
+
+      // 타이핑이 끝난 후 자동 검색 이동
+      setTimeout(() => {
+        window.location.href = `result.html?query=${encodeURIComponent(text)}`;
+      }, 250); // 살짝 여유 주기
+    }
+  }, typingSpeed);
 }
+

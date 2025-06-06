@@ -5,10 +5,11 @@
 
 /* 테마 컬러 변수 정의 */
 :root {
-  --main-color: #f35a4a;
-  --hover-color: #e14b3d;
-  --light-bg: #fff0eb;
+  --main-color: #4a90e2;    /* 푸른 계열: 선명한 파랑 */
+  --hover-color: #357ABD;   /* hover용: 살짝 더 진한 블루 */
+  --light-bg: #eaf4ff;      /* 연한 파란 배경 (기존 #fff0eb에서 교체) */
 }
+
 
 /* 전체 뷰포트 가로 스크롤 방지 */
 html, body {
@@ -36,6 +37,54 @@ h1 {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+/* 검색창 컨테이너 */
+.search-box {
+  display: flex;
+  max-width: 600px;
+  width: 100%;
+  background: #ffffff;
+  border: 2px solid var(--main-color);
+  border-radius: 999px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+  margin-top: 24px;
+  transition: box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* 검색창 포커스 시 그림자 강조 */
+.search-box:focus-within {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+/* 검색 입력창 */
+.search-box input {
+  flex: 1 1 auto;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 8px;
+  background: transparent;
+  color: #000;
+  min-width: 0;
+}
+
+/* 검색 버튼 */
+.search-box button {
+  background: var(--main-color);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.search-box button:hover {
+  background: var(--hover-color);
 }
 
 /* 반응형: 모바일 화면용 타이포 및 여백 조정 */

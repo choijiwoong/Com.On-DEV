@@ -53,7 +53,7 @@ const fetchFallbackFromN8N = async (questionText) => {
   container.innerHTML = `<p class="loading-animated">🌀 맞춤형 추천을 불러오는 중</p>`;
   startFancyLoading();
   try {
-    const response = await fetch('https://n8n.1000.school/webhook/c932befe-195e-46b0-8502-39c9b1c69cc2', {
+    const response = await fetch('https://n8n.1000.school/webhook/e167ca4a-ea51-4f12-85d1-c31acd94f3c0', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: questionText || "기본 추천 리스트 보여줘" })
@@ -112,7 +112,7 @@ function renderStars(score) {
   return starsHTML;
 }
 
-function trackProductClick(productName, productLink, query) {
+function trackProductClick(productName, productLink, query_) {
     fetch('/log/click', {
       method: 'POST',
       headers: {
@@ -121,7 +121,7 @@ function trackProductClick(productName, productLink, query) {
       body: JSON.stringify({
         product_name: productName,
         product_link: productLink,
-        product_query: query,
+        product_query: query_,// query_
         timestamp: new Date().toISOString()
       })
     }).catch(err => console.error('❌ 로그 전송 실패:', err));
@@ -171,11 +171,9 @@ const renderProduct = (p) => {
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".buy-button");
   if (!btn) return;
-
   const productName = btn.getAttribute("data-product");
   const productLink = btn.getAttribute("data-link");
-  const queryFromAttr = btn.getAttribute("data-query") || query; // fallback
-
+  const queryFromAttr = query; // fallback(프롬프트에 data-query삭제 필요)
   trackProductClick(productName, productLink, queryFromAttr);
 });
 
@@ -222,8 +220,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     queryBox.innerText = `💬 “${query}” 조건에 맞는 추천 리스트입니다.`;
 
     try {
-      startFancyLoading(); // 로딩 시작
     
+      startFancyLoading(); // 로딩 시작
+      insertFeedbackSection();
       const res = await fetch(`/api/products?query=${encodeURIComponent(query)}`);
       const data = await res.json();
 
@@ -231,7 +230,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (!data.products || data.products.length === 0) {
         await fetchFallbackFromN8N(query);
-        insertFeedbackSection();
+        //insertFeedbackSection();
+		bindRefineOptionClick();
+        renderFollowupSearchBox();
         return;
       }
       
@@ -247,7 +248,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       queryBox.innerText = "추천 상품을 불러오는 데 문제가 발생했어요.";
       await fetchFallbackFromN8N(query);
     }
-    insertFeedbackSection();
+    renderFollowupSearchBox();
+    //insertFeedbackSection();
     insertFooter();
   } else {
     queryBox.innerText = "💬 조건을 인식하지 못했어요. 기본 추천 리스트를 보여드릴게요.";
@@ -308,7 +310,7 @@ function insertFeedbackSection() {
 
   section.innerHTML = `
     <p>📬 서비스에 대한 피드백이 있으신가요?<br>
-    아래 오픈채팅방을 통해 언제든지 의견을 나눠주세요!</p>
+    아래 오픈채팅방을 통해 언제든지<br>의견을 나눠주세요!</p>
     
     <a href="https://open.kakao.com/o/glqkU8zh" target="_blank" style="display:inline-block; margin: 10px; font-weight: bold; color: #0068ff; text-decoration: none;">
       👉 오픈채팅방 바로가기
@@ -323,5 +325,54 @@ function insertFeedbackSection() {
   `;
 
   document.body.appendChild(section);
+}
+
+function renderFollowupSearchBox() {
+  if (!query) return;
+
+  const container = document.getElementById("followup-search");
+  if (!container) return;
+
+  container.innerHTML = `
+  <div class="followup-box">
+    <p class="description">
+      🔍 더 원하는 조건이 있으신가요?<br>
+      추가 키워드를 이어서 입력해 보세요!
+    </p>
+    <form class="search-box" onsubmit="followupSearch(); return false;">
+      <input
+        type="text"
+        id="followupInput"
+        placeholder="예: 마음이 바뀌었어!"
+      />
+      <button type="submit">검색</button>
+    </form>
+  </div>
+`;
+}
+
+function followupSearch() {
+  const extra = document.getElementById("followupInput").value.trim();
+  if (!extra) return;
+
+  const newQuery = `${query} ${extra}`.trim();
+  location.href = `/result.html?query=${encodeURIComponent(newQuery)}`;
+}
+
+
+function bindRefineOptionClick() {
+  document.querySelectorAll('.refine-option').forEach(el => {
+    el.addEventListener('click', () => {
+      const extra = el.dataset.query;
+      const input = document.getElementById('followupInput');
+      if (!extra || !input) return;
+
+      // 기존 입력 내용과 공백으로 구분하여 덧붙이기
+	  input.value = `${input.value} ${extra}`;
+
+      // 입력창 포커스 주기
+      input.focus();
+    });
+  });
 }
 

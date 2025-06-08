@@ -15,6 +15,7 @@ log.setLevel(logging.INFO)  # ERROR CRITICAL WARNING INFO
 	
 @app.route("/")
 def index():
+    return render_template("optimize.html")
     user_id = request.cookies.get("user_id")
     if not user_id:
         user_id = str(uuid.uuid4())  # 고유 사용자 ID 생성

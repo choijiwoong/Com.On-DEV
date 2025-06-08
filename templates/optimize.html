@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>제품 추천 실험</title>
+  <style>
+    .product { border: 1px solid #ccc; padding: 1rem; margin-top: 1rem; border-radius: 10px; }
+    .product-header { display: flex; gap: 1rem; }
+    .product-info h2 { margin: 0; }
+    .buy-button { display: inline-block; margin-top: 0.5rem; color: blue; text-decoration: underline; }
+    img { width: 100px; height: auto; }
+    .refine-block { border: 2px dashed #999; padding: 1rem; margin-top: 1rem; border-radius: 8px; }
+    .refine-title { font-weight: bold; margin-bottom: 0.5rem; }
+    .refine-options button { margin: 0.2rem; padding: 0.4rem 0.8rem; border-radius: 6px; border: none; background: #eef; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>제품 추천 실험</h2>
+  <form id="questionForm">
+    <label for="question">질문을 입력하세요:</label><br>
+    <input type="text" id="question" name="question" required style="width: 300px;">
+    <button type="submit">제출</button>
+  </form>
+
+  <p id="queryExplanation">아래는 추천된 제품입니다:</p>
+  <div id="result">결과를 불러오는 중...</div>
+  <div id="refine-question" style="display: none;"></div>
+
+  <script>
+    async function fetchField(name, field) {
+      try {
+        const res = await fetch(`https://n8n.1000.school/webhook/api/get_${field}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: name })
+        });
+        const raw = await res.text();
+        console.log(`📅 ${field} 응답 원문:`, raw);
+        return raw;
+      } catch (err) {
+        console.warn(`❌ ${field} 오류:`, err);
+        return '정보 없음';
+      }
+    }
+
+    async function getProductDetail(name) {
+      const fields = ['highlight', 'review', 'feature', 'link', 'price', 'weight', 'score' ];
+      const fetches = fields.map(field => fetchField(name, field));
+      const values = await Promise.all(fetches);
+      const detail = { name };
+      fields.forEach((f, i) => detail[f] = values[i]);
+      return detail;
+    }
+
+    async function fetchRefineOptions(question) {
+	  const res = await fetch('https://n8n.1000.school/webhook/api/get_refine_questions', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ question })
+	  });
+	  const text = await res.text();
+	  try {
+		return JSON.parse(text);
+	  } catch (err) {
+		console.warn('❌ refine JSON 파싱 오류:', err, text);
+		return [];
+	  }
+	}
+
+
+    document.getElementById('questionForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const question = document.getElementById('question').value;
+      const resultDiv = document.getElementById('result');
+      const refineDiv = document.getElementById('refine-question');
+      resultDiv.innerHTML = '추천 제품을 불러오는 중입니다...';
+      refineDiv.style.display = 'none';
+
+      try {
+        const [productNameRes, introRes, refineJson] = await Promise.all([
+          fetch('https://n8n.1000.school/webhook/api/get_product_name', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question })
+          }),
+          fetch('https://n8n.1000.school/webhook/api/get_intro', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question })
+          }),
+          fetchRefineOptions(question)
+        ]);
+
+        const productNameText = await productNameRes.text();
+        const introText = await introRes.text();
+        const productNames = productNameText.trim().split('\n').filter(Boolean);
+
+        const productDetails = await Promise.all(productNames.map(getProductDetail));
+
+        resultDiv.innerHTML = `<div class="intro"><p><strong>추천 이유:</strong> ${introText}</p></div>`;
+        for (const p of productDetails) {
+          const html = `
+            <div class="product">
+              <div class="product-header">
+                <div class="image-slider">
+                  <img src="${p.image || ''}" alt="${p.name}">
+                </div>
+                <div class="product-info">
+                  <h2>🛙️ ${p.name}</h2>
+                  <p><strong>가격:</strong> ${p.price || '정보 없음'}</p>
+                  <p><strong>무게:</strong> ${p.weight || '정보 없음'}</p>
+                  <p><strong>주요 특징:</strong> ${p.feature || '정보 없음'}</p>
+                  <div class="review-box">
+                    <span class="stars">⭐⭐⭐⭐☆</span>
+                    <span class="score">${p.score || '정보 없음'} / 5</span>
+                    <p class="quote">“${p.review || '정보 없음'}”</p>
+                  </div>
+                </div>
+              </div>
+              <p class="highlight">${p.highlight || '정보 없음'}</p>
+              <a class="buy-button" href="https://www.coupang.com/np/search?component=&q=${p.name}&channel=user" target="_blank" rel="noopener noreferrer">🔗 상세페이지에서 자세히 보기</a>
+            </div>`;
+          resultDiv.innerHTML += html;
+        }
+
+        if (refineJson.length > 0) {
+          let refineHTML = '<div class="refine-block"><div class="refine-title">🔍 질문을 더 구체화해보시겠어요?</div>';
+          refineJson.forEach(item => {
+            refineHTML += `<p>${item.question}</p>`;
+            item.options.forEach(opt => {
+              refineHTML += `<button class="refine-option" data-query="${opt}">${opt}</button>`;
+            });
+          });
+          refineHTML += '</div>';
+          refineDiv.innerHTML = refineHTML;
+          refineDiv.style.display = 'block';
+        }
+
+      } catch (error) {
+        resultDiv.innerHTML = '❌ 오류가 발생했습니다: ' + error.message;
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (e.target.classList.contains('refine-option')) {
+        const selected = e.target.getAttribute('data-query');
+        const input = document.getElementById('question');
+        input.value += ' ' + selected;
+        document.getElementById('refine-question').style.display = 'none';
+        document.getElementById('questionForm').dispatchEvent(new Event('submit'));
+      }
+    });
+  </script>
+</body>
+</html>

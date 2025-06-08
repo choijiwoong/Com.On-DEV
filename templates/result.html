@@ -1,46 +1,347 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Com.On - 추천 보고서</title>
-
+  <meta charset="UTF-8">
+  <title>Com.On 추천 결과</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/result.css') }}">
-  <script src="{{ url_for('static', filename='js/result.js') }}"></script>
-
 </head>
-
 <body>
   <div class="navbar">
-  <div class="navbar-left">
-    <a href="/" class="navbar-logo">
-      <img
-        src="https://velog.velcdn.com/images/gogogi313/post/21e72a8f-67e3-43c4-9395-8c8e6e5faa18/image.png"
-        alt="팀 로고"
-        class="logo-img"
-      />
-    </a>
-    <a href="/" class="logo-title">Com.On</a> <!-- ✅ 변경된 부분 -->
+    <div class="navbar-left">
+      <a href="/" class="navbar-logo">
+        <img
+          src="https://velog.velcdn.com/images/gogogi313/post/21e72a8f-67e3-43c4-9395-8c8e6e5faa18/image.png"
+          alt="팀 로고"
+          class="logo-img"
+        />
+      </a>
+      <a href="/" class="logo-title">Com.On</a> <!-- ✅ 변경된 부분 -->
+    </div>
+    <span class="navbar-title">맞춤형 추천 보고서</span>
   </div>
-  <span class="navbar-title">맞춤형 추천 보고서</span>
-</div>
-
-
-  <p id="queryText">사용자의 조건을 불러오는 중...</p>
+  
+  <p id="queryText"></h2>
   <p id="queryExplanation"></p>
   <div id="product-container"></div>
-  <div id="refine-question" class="follow-up"></div>
+  <div id="refine-question"></div>
   <div id="followup-search"></div>
-  
-  <!-- Google Tag Manager (noscript) -->
-  <noscript>
-    <iframe
-      src="https://www.googletagmanager.com/ns.html?id=GTM-MZHQSKG5"
-      height="0"
-      width="0"
-      style="display:none;visibility:hidden"
-    ></iframe>
-  </noscript>
+
+  <script>
+    (function (w, d, s, l, i) {
+      w[l] = w[l] || []; w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+      var f = d.getElementsByTagName(s)[0], j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : '';
+      j.async = true; j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', 'GTM-MZHQSKG5');
+
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("query");
+
+    async function fetchField(name, field) {
+      try {
+        const res = await fetch(`https://n8n.1000.school/webhook/api/get_${field}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: name })
+        });
+        return await res.text();
+      } catch (err) {
+        console.warn(`❌ ${field} 오류:`, err);
+        return '정보 없음';
+      }
+    }
+
+    async function getProductDetail(name) {
+      const fields = ['highlight', 'review', 'feature', 'link', 'price', 'weight', 'score'];
+      const fetches = fields.map(field => fetchField(name, field));
+      const values = await Promise.all(fetches);
+      const detail = { name };
+      fields.forEach((f, i) => detail[f] = values[i]);
+      return detail;
+    }
+
+    async function fetchRefineOptions(question) {
+      try {
+        const res = await fetch('https://n8n.1000.school/webhook/api/get_refine_questions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+        return await res.json();
+      } catch (err) {
+        console.warn('❌ refine JSON 파싱 오류:', err);
+        return [];
+      }
+    }
+
+    function renderStars(score) {
+      const s = parseFloat(score);
+      const full = Math.floor(s);
+      const half = s - full >= 0.5;
+      return '★'.repeat(full) + (half ? '☆' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
+    }
+
+    function renderProduct(p) {
+      return `
+        <div class="product">
+          <div class="product-header">
+            <div class="image-slider">
+              <img src="https://via.placeholder.com/100" alt="${p.name}">
+            </div>
+            <div class="product-info">
+              <h2>${p.name}</h2>
+              <p><strong>가격:</strong> ${p.price}</p>
+              <p><strong>무게:</strong> ${p.weight}</p>
+              <p><strong>주요 특징:</strong> ${p.feature}</p>
+              <div class="review-box">
+                <span class="stars">${renderStars(p.score)}</span>
+                <span class="score">${p.score} / 5</span>
+                <p class="quote">“${p.review}”</p>
+              </div>
+            </div>
+          </div>
+          <p class="highlight">${p.highlight}</p>
+          <a class="buy-button" href="${p.link}" target="_blank">🔗 상세페이지에서 자세히 보기</a>
+        </div>`;
+    }
+	
+	function insertFeedbackSection() {
+	  const section = document.createElement("div");
+	  section.style.marginTop = "40px";
+	  section.style.padding = "20px";
+	  section.style.textAlign = "center";
+	  section.style.fontSize = "0.95rem";
+	  section.style.color = "#555";
+
+	  section.innerHTML = `
+		<p>📬 서비스에 대한 피드백이 있으신가요?<br>
+		아래 오픈채팅방을 통해 언제든지<br>의견을 나눠주세요!</p>
+		
+		<a href="https://open.kakao.com/o/glqkU8zh" target="_blank" style="display:inline-block; margin: 10px; font-weight: bold; color: #0068ff; text-decoration: none;">
+		  👉 오픈채팅방 바로가기
+		</a>
+		
+		<div style="margin-top: 15px;">
+		  <img src="https://velog.velcdn.com/images/gogogi313/post/35554d94-8b43-444a-8dc9-f31d5a168065/image.png" 
+			   alt="오픈채팅방 QR코드" 
+			   style="width: 130px; height: 130px; border: 1px solid #eee; border-radius: 8px;">
+		  <p style="margin-top: 8px; font-size: 0.85rem; color: #999;">QR로도 참여하실 수 있어요</p>
+		</div>
+	  `;
+
+	  document.body.appendChild(section);
+	}
+	
+	function startFancyLoading() {
+	  const container = document.getElementById("product-container");
+	  container.innerHTML = `
+		<div id="loading-visual" class="loading-visual">
+		  <div class="doc-count">
+			📄 <span id="doc-count">0</span>개의 문서를 탐색 중입니다...
+		  </div>
+		  <div class="doc-icons">
+			<span class="doc-icon">📄</span>
+			<span class="doc-icon">🗂️</span>
+			<span class="doc-icon">📁</span>
+			<span class="doc-icon">📃</span>
+			<span class="doc-icon">📄</span>
+			<span class="doc-icon">📄</span>
+			<span class="doc-icon">📄</span>
+		  </div>
+		</div>
+	  `;
+
+	  let count = 0;
+	  const countSpan = document.getElementById("doc-count");
+	  const docText = document.querySelector(".doc-count");
+
+	  // 80 ~ 120 사이의 랜덤 목표값 설정
+	  const targetCount = Math.floor(Math.random() * 41) + 80;
+
+	  const interval = setInterval(() => {
+		const increment = Math.floor(Math.random() * 4) + 2;
+		count += increment;
+
+		if (count >= targetCount) {
+		  clearInterval(interval);
+		  countSpan.textContent = `약 ${targetCount}`;
+		  docText.innerHTML = `📄 약 ${targetCount}개의 문서를 탐색했습니다.<br>잠시만 기다려주세요...`;
+		} else {
+		  countSpan.textContent = count;
+		}
+	  }, 350);
+
+	  return () => clearInterval(interval);
+	}
+	
+	function renderFollowupSearchBox() {
+	  if (!query) return;
+
+	  const container = document.getElementById("followup-search");
+	  if (!container) return;
+
+	  container.innerHTML = `
+	  <div class="followup-box">
+		<p class="description">
+		  🔍 더 원하는 조건이 있으신가요?<br>
+		  추가 키워드를 이어서 입력해 보세요!
+		</p>
+		<form class="search-box" onsubmit="followupSearch(); return false;">
+		  <input
+			type="text"
+			id="followupInput"
+			placeholder="예: 마음이 바뀌었어!"
+		  />
+		  <button type="submit">검색</button>
+		</form>
+	  </div>
+	`;
+	}
+	
+	function followupSearch() {
+	  const extra = document.getElementById("followupInput").value.trim();
+	  if (!extra) return;
+
+	  const newQuery = `${query} ${extra}`.trim();
+	  location.href = `/search?query=${encodeURIComponent(newQuery)}`;
+	}
+	
+	function fillExample(text) {
+		const explainBox = document.getElementById("queryExplanation");
+
+		let index = 0;
+		const typingSpeed = 30; // 밀리초 단위 속도
+
+		explainBox.textContent = ''; // 초기화
+
+		const typingInterval = setInterval(() => {
+		  if (index < text.length) {
+			explainBox.textContent += text.charAt(index);
+			index++;
+		  } else {
+			clearInterval(typingInterval);
+		  }
+		}, typingSpeed);
+	}
+	
+	async function getValidImageURLs(query, max = 1) {
+	  try {
+		const res = await fetch("https://n8n.1000.school/webhook/naver-image", {
+		  method: "POST",
+		  headers: { "Content-Type": "application/json" },
+		  body: JSON.stringify({ query })
+		});
+		const items = await res.json();
+		for (const item of items) {
+		  const isValid = await validateImage(item.thumbnail);
+		  if (isValid) return [item.thumbnail]; // ✅ 한 장만 리턴
+		}
+	  } catch (err) {
+		console.error("이미지 오류:", err);
+	  }
+	  return [];
+	}
+
+
+
+	// 이미지 URL이 실제로 표시 가능한지 검사
+	function validateImage(url) {
+	  return new Promise((resolve) => {
+		const img = new Image();
+		img.onload = () => resolve(true);
+		img.onerror = () => resolve(false);
+		img.src = url;
+	  });
+	}
+
+    async function renderPage() {
+      const queryBox = document.getElementById("queryText");
+      const explanationBox = document.getElementById("queryExplanation");
+      const container = document.getElementById("product-container");
+      const refineDiv = document.getElementById("refine-question");
+      if (!query) {
+        queryBox.innerText = "조건을 인식하지 못했어요.";
+        return;
+      }
+
+      queryBox.innerText = `💬 “${query}” 조건에 맞는 추천 리스트입니다.`;
+      startFancyLoading();
+	  insertFeedbackSection();
+
+      try {
+        const [productNameRes, introRes, refineJson] = await Promise.all([
+          fetch('https://n8n.1000.school/webhook/api/get_product_name', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: query })
+          }),
+          fetch('https://n8n.1000.school/webhook/api/get_intro', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: query })
+          }),
+          fetchRefineOptions(query)
+        ]);
+
+        const productNameText = await productNameRes.text();
+        const introText = await introRes.text();
+        const productNames = productNameText.trim().split('\n').filter(Boolean);
+		fillExample(introText);
+
+        const productDetails = await Promise.all(productNames.map(getProductDetail));
+        container.innerHTML = "";
+        for (const p of productDetails) {
+		  container.insertAdjacentHTML("beforeend", renderProduct(p));
+		  const productEls = container.querySelectorAll(".product");
+		  const latestProduct = productEls[productEls.length - 1];
+		  const imageSlider = latestProduct.querySelector(".image-slider");
+
+		  if (imageSlider && p.name) {
+			const images = await getValidImageURLs(p.name, 1);
+			if (images.length > 0) {
+			  imageSlider.innerHTML = `
+				<img src="${images[0]}" class="slide active" alt="${p.name} 이미지">`;
+			}
+		  }
+		}
+
+
+        if (refineJson.length > 0) {
+		  let html = `
+			<p class="refine-guidance">
+			  🔧 조금 더 구체적인 조건을 선택해 보세요!<br>
+			  아래 질문을 통해 <strong>나에게 꼭 맞는 제품</strong>을 추천받을 수 있어요 🙌
+			</p>
+		  `;
+
+		  refineJson.forEach(item => {
+			html += `
+			  <div class="refine-block">
+				<p class="refine-title">${item.question}</p>
+				<div class="refine-options">
+				  ${item.options.map(opt => `
+					<span class="refine-option" data-query="${opt}">${opt}</span>
+				  `).join('')}
+				</div>
+			  </div>
+			`;
+		  });
+
+		  refineDiv.innerHTML = html;
+		}
+
+		renderFollowupSearchBox();
+      } catch (error) {
+        container.innerHTML = `<p>❌ 오류가 발생했습니다: ${error.message}</p>`;
+      }
+    }
+
+    document.addEventListener("click", (e) => {
+	  if (e.target.classList.contains("refine-option")) {
+		const selected = e.target.getAttribute("data-query");
+		const input = document.getElementById("followupInput");
+		if (!input) return;
+		input.value = `${input.value} ${selected}`.trim(); // 이어서 입력
+		input.focus();
+	  }
+	});
+
+
+    document.addEventListener("DOMContentLoaded", renderPage);
+  </script>
 </body>
 </html>

@@ -5,6 +5,9 @@ import os
 from googlesearch import search
 from datetime import datetime
 import uuid
+import requests
+from bs4 import BeautifulSoup
+
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -107,6 +110,47 @@ def page_not_found(e):
     app.logger.info(log_msg)
 
     return render_template("404.html"), 404
+
+def fetch_price_naver_api(query):
+    client_id = "q6fZYI_aRUhWF8PYERvv"
+    client_secret = "NkaJXyfR2R"
+    
+    headers = {
+        "X-Naver-Client-Id": client_id,
+        "X-Naver-Client-Secret": client_secret
+    }
+
+    params = {
+        "query": query,
+        "display": 1,  # 1개만 조회
+        "sort": "sim"  # 유사도순
+    }
+
+    res = requests.get("https://openapi.naver.com/v1/search/shop.json", headers=headers, params=params)
+
+    if res.status_code == 200:
+        data = res.json()
+        if data["items"]:
+            item = data["items"][0]
+            price = f"{int(item['lprice']):,}원"
+            link = item["link"]  # 💡 제품 링크
+            return price, link
+    
+    return "정보 없음", ""
+
+
+@app.route('/api/get_price', methods=['POST'])
+def get_price():
+    data = request.get_json()
+    query = data.get('question', '')
+    
+    price, link = fetch_price_naver_api(query)
+    
+    return jsonify({
+        "price": price,
+        "link": link
+    })
+
 
 
 

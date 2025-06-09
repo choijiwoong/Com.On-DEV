@@ -37,27 +37,64 @@
     const params = new URLSearchParams(window.location.search);
     const query = params.get("query");
 
-    async function fetchField(name, field) {
-      try {
-        const res = await fetch(`https://n8n.1000.school/webhook/api/get_${field}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: name })
-        });
-        return await res.text();
-      } catch (err) {
-        console.warn(`❌ ${field} 오류:`, err);
-        return '정보 없음';
-      }
-    }
+	async function fetchField(name, field) {
+	  try {
+	    if (field === 'price') {
+	      const res = await fetch(`/api/get_price`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ question: name })
+	      });
+	      const data = await res.json();
+	      return data.price || '정보 없음';
+	    }
 
-    async function getProductDetail(name) {
-      const fields = ['highlight', 'review', 'feature', 'link', 'price', 'weight', 'score'];
-      const fetches = fields.map(field => fetchField(name, field));
-      const values = await Promise.all(fetches);
-      const detail = { name };
-      fields.forEach((f, i) => detail[f] = values[i]);
-      return detail;
-    }
+	    const res = await fetch(`https://n8n.1000.school/webhook/api/get_${field}`, {
+	      method: 'POST',
+	      headers: { 'Content-Type': 'application/json' },
+	      body: JSON.stringify({ question: name })
+	    });
+
+	    return await res.text();
+	  } catch (err) {
+	    console.warn(`❌ ${field} 오류:`, err);
+	    return '정보 없음';
+	  }
+	}
+
+
+
+
+	async function getProductDetail(name) {
+	  const fields = ['highlight', 'review', 'feature', 'score'];
+	  const fetches = fields.map(field => fetchField(name, field));
+	  const values = await Promise.all(fetches);
+
+	  const detail = { name };
+	  fields.forEach((f, i) => {
+	    detail[f] = values[i];
+	  });
+
+	  // ✅ 가격 + 링크 함께 가져오기
+	  try {
+	    const res = await fetch('/api/get_price', {
+	      method: 'POST',
+	      headers: { 'Content-Type': 'application/json' },
+	      body: JSON.stringify({ question: name })
+	    });
+	    const data = await res.json();
+	    detail.price = data.price || '정보 없음'; // 🔥 여기를 추가해야 함
+	    detail.link = data.link || `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(name)}`;
+	  } catch {
+	    detail.price = '정보 없음'; // 🔥 예외 처리도 함께
+	    detail.link = `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(name)}`;
+	  }
+
+	  return detail;
+	}
+
+
+
 
     async function fetchRefineOptions(question) {
       try {
@@ -89,7 +126,6 @@
             <div class="product-info">
               <h2>${p.name}</h2>
               <p><strong>가격:</strong> ${p.price}</p>
-              <p><strong>무게:</strong> ${p.weight}</p>
               <p><strong>주요 특징:</strong> ${p.feature}</p>
               <div class="review-box">
                 <span class="stars">${renderStars(p.score)}</span>
@@ -263,8 +299,57 @@
       }
 
       queryBox.innerText = `💬 “${query}” 조건에 맞는 추천 리스트입니다.`;
-      startFancyLoading();
-	  insertFeedbackSection();
+      
+      insertFeedbackSection();
+      
+      //DB
+	// 초기 로딩 화면
+	container.innerHTML = `<div class="fancyloading"></div>`;
+	startFancyLoading();
+	// 최소 3~최대 5초간 fancy 로딩
+	const delay = Math.random() * 2000 + 3000;
+	await new Promise((resolve) => setTimeout(resolve, delay));
+
+	// DB fetch
+	try {
+	  const productData = await fetch(`/api/products?query=${encodeURIComponent(query)}`);
+	  if (!productData.ok) throw new Error("DB 제품 조회 실패");
+
+	  const productsFromDB = await productData.json();
+	  if (productsFromDB.products && productsFromDB.products.length > 0) {
+	    container.innerHTML = ""; // fancy 로딩 제거
+
+	    // ⛔️ fillExample 사용 금지 → 바로 설명 출력
+	    const explainEl = document.getElementById("queryExplanation");
+	    if (explainEl && productsFromDB.explanation) {
+	      explainEl.innerText = productsFromDB.explanation;
+	    }
+
+	    // 제품 카드 렌더링
+	    for (const p of productsFromDB.products) {
+	      const tempDiv = document.createElement("div");
+	      tempDiv.innerHTML = renderProduct(p); // 제품 HTML 문자열
+	      const latestProduct = tempDiv.firstElementChild;
+
+	      // 이미 image가 있으므로 getValidImageURLs 생략
+	      const imageSlider = latestProduct.querySelector(".image-slider");
+	      if (imageSlider && p.image) {
+		imageSlider.innerHTML = `
+		  <img src="${p.image}" class="slide active" alt="${p.name} 이미지">`;
+	      }
+
+	      container.appendChild(latestProduct);
+	    }
+
+	    renderFollowupSearchBox();
+	    return; // ✅ 캐시된 제품이므로 이후 검색 생략
+	  }
+	} catch (err) {
+	  console.error("❌ DB 로딩 오류:", err);
+	  fillExample("⚠️ 추천 정보를 불러오는 데 문제가 발생했습니다.");
+	}
+
+	      //DB끝
 
       try {
         const [productNameRes, introRes, refineJson] = await Promise.all([
@@ -278,6 +363,23 @@
         ]);
 
         const productNameText = await productNameRes.text();
+        
+        // check exception
+        if (productNameText.startsWith("Exception:")) {
+	  const reason = productNameText.replace("Exception:", "").trim();
+	  container.innerHTML = `
+	    <div class="error-message">
+	      😥 죄송해요. 현재 조건에 맞는 제품을 찾지 못했어요.<br><br>
+	      <strong>이유:</strong> ${reason}<br><br>
+	      조건을 조금 더 구체적이거나 일반적인 키워드로 변경해 다시 검색해보시는 건 어떨까요?<br>
+	      예: "노트북 영상편집용", "비건 김밥" 등
+	    </div>
+	  `;
+	  explanationBox.innerText = ""; // 기존 intro 제거
+	  return; // ❗ 추천 및 렌더링 중단
+	}
+
+        
         const introText = await introRes.text();
         const productNames = productNameText.trim().split('\n').filter(Boolean);
 		fillExample(introText);
